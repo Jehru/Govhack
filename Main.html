@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PlaySmart – What you could have instead</title>
+<style>
+  :root{
+    --bg:#fff; --card:#ffffff; --muted:#6b7280; --text:#111827;
+    --line:#e5e7eb; --accent:#111827; --shadow:0 8px 24px rgba(0,0,0,.06);
+  }
+  *{box-sizing:border-box}
+  /* bump everything by +0.5rem */
+  html { font-size: calc(1rem + 0.5rem); } /* base 16px → 24px typically */
+  body{
+    margin:0;background:var(--bg);color:var(--text);
+    font:1rem/1.45 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif
+  }
+  .container{max-width:1100px;margin:28px auto;padding:0 20px}
+  .topbar{display:flex;align-items:center;gap:14px;margin-bottom:20px}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:700}
+  .logo img{height:1.4em; display:block} /* scales with bumped font */
+  .brand{font-weight:800}
+  .spacer{flex:1}
+  .btn{appearance:none;border:0;background:#111827;color:#fff;border-radius:10px;
+       padding:.5em .8em;font-weight:700;cursor:pointer;box-shadow:var(--shadow)}
+  .btn:disabled{opacity:.6;cursor:not-allowed}
+
+  .grid{display:grid;grid-template-columns:320px 1fr;gap:24px}
+  @media (max-width:900px){ .grid{grid-template-columns:1fr} }
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;}
+
+  .field{display:grid;gap:6px;margin-bottom:14px;margin-top:14px;}
+  .field label{font-size:.75rem;color:var(--muted)}
+  .input{
+    width:100%; border:1px solid var(--line); border-radius:10px; padding:.6em .8em;
+    font-size:1rem; background:#fff; outline:none;
+  }
+  .input:focus{border-color:#9ca3af; box-shadow:0 0 0 3px rgba(0,0,0,.06)}
+
+  .suggestion{ display:grid; gap:14px; }
+  .preview{
+    height:12.5rem; /* ~200px at 16px root; scales with our base */
+    border-radius:10px; border:1px solid var(--line); overflow:hidden;
+    background: transparent;
+    display:grid; place-items:center;
+  }
+  .preview .emoji{font-size:5rem; line-height:1}
+  .preview img{max-height:100%; max-width:100%; object-fit:contain; display:block}
+
+  .title{
+    font-weight:800;
+    line-height:1.1;
+  }
+  #description {
+    color: var(--text);
+  }
+  .muted{color:var(--muted)}
+
+  #picked, #next {
+    font-size: 0.875rem;
+  }
+
+  /* ↓↓↓ the only change: stack Next under Now ↓↓↓ */
+  .row{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:10px;
+  }
+  /* ↑↑↑ */
+
+  .progress{
+    height:.5rem;border-radius:999px;background:#f3f4f6;border:1px solid var(--line);
+    overflow:hidden;
+  }
+  .progress > div{ height:100%;background:#111827;width:0% }
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <div class="logo">
+        <!-- use your provided image as the logo -->
+        <img src="Group 10.svg" alt="PlaySmart logo">
+      </div>
+      <div class="spacer"></div>
+      <label>
+        <input id="csv" type="file" accept=".csv" hidden />
+        <button class="btn" id="csvBtn">Import CSV</button>
+      </label>
+    </div>
+
+    <div class="grid">
+      <!-- Left: Controls -->
+      <div class="card">
+        <div class="title">Your weekly spend on in-game purchases</div>
+        <div class="field">
+          <label for="amount">Amount ($)</label>
+          <input id="amount" class="input" type="number" min="0" step="1" value="25" />
+        </div>
+        <div class="field">
+          <label for="weeks">Week(s)</label>
+          <input id="weeks" class="input" type="number" min="1" step="1" value="4" />
+        </div>
+      </div>
+
+      <!-- Right: Suggestion -->
+      <div class="card">
+        <div class="suggestion">
+          <div>
+            <div class="title">What you could have instead</div>
+            <div class="muted">Total saved: <span id="total">$0</span></div>
+          </div>
+          <div class="preview" id="preview" aria-label="Item preview"><!-- preview --></div>
+          <div class="muted" id="description">—</div>
+
+          <div class="progress" title="Progress toward next item">
+            <div id="bar"></div>
+          </div>
+
+          <div class="row">
+            <div class="muted" id="picked">—</div>
+            <div class="muted" id="next">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:24px; text-align:center; font-size:0.5rem;">
+      <a href="https://www.gamblinghelponline.org.au/about-us" target="_blank" class="muted">
+        Need help or support? Visit Gambling Help Online for free, confidential 24/7 support
+      </a>
+    </div>
+  </div>
+
+<script>
+  // --- Expanded catalog (AUD) ---
+  let catalog = [
+    { name:"Coffee for a week", price:25, emoji:"☕️" },
+    { name:"Movie night (2 tickets)", price:40, emoji:"🎬" },
+    { name:"New game", price:99, emoji:"🎮" },
+    { name:"Running shoes", price:160, emoji:"👟" },
+    { name:"Noise-cancel headphones", price:349, emoji:"🎧" },
+    { name:"Weekend trip (domestic)", price:600, emoji:"🧳" },
+    { name:"iPhone ()", price:1499, emoji:"📱" },
+    { name:"Bali trip (return + 5 nights)", price:2200, emoji:"🏝️" },
+    { name:"Used car", price:12000, emoji:"🚗" },
+    { name:"New car", price:35000, emoji:"🚙" },
+    { name:"House deposit", price:80000, emoji:"🏠" },
+    { name:"Penthouse", price:1500000, emoji:"🏢" }
+  ].sort((a,b)=>a.price-b.price);
+
+  // --- Elements ---
+  const amountEl = document.getElementById('amount');
+  const weeksEl   = document.getElementById('weeks');
+  const totalEl  = document.getElementById('total');
+  const preview  = document.getElementById('preview');
+  const pickedEl = document.getElementById('picked');
+  const nextEl   = document.getElementById('next');
+  const barEl    = document.getElementById('bar');
+  const csvInput = document.getElementById('csv');
+  const csvBtn   = document.getElementById('csvBtn');
+
+  // Currency helpers
+  const fmt = new Intl.NumberFormat('en-AU',{ style:'currency', currency:'AUD', maximumFractionDigits:0 });
+  function parseMoney(x){
+    if(typeof x === 'number') return x;
+    return Number(String(x).replace(/[^0-9.]/g,'')) || 0;
+  }
+
+  function computeTotal(){
+    const amount = parseMoney(amountEl.value);   // dollars per week
+    const weeks  = Math.max(0, Number(weeksEl.value||0));
+    return amount * weeks;                       // total potential savings
+  }
+
+  function pickItem(total){
+    const affordable = catalog.filter(i => i.price <= total);
+    const picked = affordable.length ? affordable[affordable.length-1] : null;
+
+    // find next higher item
+    let next = null;
+    for (const item of catalog){
+      if (!picked || item.price > picked.price){
+        next = item;
+        if (!picked || item.price > total){ break; }
+      }
+    }
+    return { picked, next };
+  }
+
+  function render(){
+    const total = computeTotal();
+    totalEl.textContent = fmt.format(total);
+
+    const { picked, next } = pickItem(total);
+
+    // Preview
+    preview.innerHTML = '';
+    const holder = document.createElement('div');
+
+    if (picked){
+      pickedEl.textContent = `Now: ${picked.name} • ${fmt.format(picked.price)}`;
+      if (picked.emoji && !/^https?:/i.test(picked.emoji)){
+        holder.className = 'emoji'; holder.textContent = picked.emoji;
+      } else if (picked.emoji){
+        const img = new Image(); img.src = picked.emoji; holder.appendChild(img);
+      } else {
+        holder.className = 'emoji'; holder.textContent = '🎁';
+      }
+    } else {
+      pickedEl.textContent = `Now: Keep saving…`;
+      holder.className = 'emoji'; holder.textContent = '💰';
+    }
+    preview.appendChild(holder);
+    const descEl = document.getElementById('description');
+    descEl.textContent = picked ? picked.name : "—";
+
+    // Progress to next item
+    if (next){
+      nextEl.textContent = `Next: ${next.name} • ${fmt.format(next.price)}`;
+      const pct = Math.max(0, Math.min(1, total / next.price));
+      barEl.style.width = (pct*100).toFixed(1) + '%';
+    } else {
+      nextEl.textContent = 'Next: —';
+      barEl.style.width = '100%';
+    }
+  }
+
+  // CSV import (optional)
+  csvBtn.addEventListener('click', ()=> csvInput.click());
+  csvInput.addEventListener('change', async (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const text = await file.text();
+    const lines = text.split(/\r?\n/).filter(Boolean);
+    const out = [];
+    for (let i=0;i<lines.length;i++){
+      const cols = lines[i].split(',').map(s=>s.trim());
+      if (i===0 && /name/i.test(cols[0])) continue; // header
+      if (cols.length>=2){
+        out.push({ name: cols[0], price: parseMoney(cols[1]), emoji: cols[2]||'🎁' });
+      }
+    }
+    if (out.length){
+      catalog = out.sort((a,b)=>a.price-b.price);
+      render();
+      alert('Catalog updated from CSV.');
+    } else {
+      alert('CSV not recognised. Expected columns: name,price,emojiOrImage');
+    }
+    csvInput.value = '';
+  });
+
+  amountEl.addEventListener('input', render);
+  weeksEl.addEventListener('input', render);
+
+  // Initial render
+  render();
+</script>
+</body>
+</html>
